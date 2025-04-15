@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+
 import gi
 import os
 import json
@@ -26,7 +27,7 @@ class SSHSessionManager(Adw.Application):
         css_provider = Gtk.CssProvider()
         css_provider.load_from_data('''
             .session-label-bg {
-                background-color: #0d6efd; /* mesma cor do botão editar */
+                background-color: #0d6efd;
                 padding: 4px 8px;
                 border-radius: 6px;
                 color: white;
@@ -72,7 +73,6 @@ class SSHSessionManager(Adw.Application):
                 background-color: #ffc107;
                 color: black;
             }
-            /* Adicionar controle explícito de tamanho com CSS */
             .small-entry {
                 max-width: 200px;
                 min-width: 150px;
@@ -80,7 +80,6 @@ class SSHSessionManager(Adw.Application):
             .large-entry {
                 min-width: 300px;
             }
-            /* Novo estilo para o contêiner de formulário alinhado à direita */
             .right-aligned-form {
                 margin-left: auto;
                 margin-right: 0;
@@ -99,7 +98,7 @@ class SSHSessionManager(Adw.Application):
 
         win = Gtk.ApplicationWindow(application=self)
         
-        win.set_title("Gerenciador de Sessões SSH")
+        win.set_title("SSH Session Manager")
         win.set_default_size(700, 220)
         win.set_resizable(True)
         win.set_hide_on_close(False)
@@ -107,74 +106,68 @@ class SSHSessionManager(Adw.Application):
         main_grid = Gtk.Grid(column_spacing=24, row_spacing=12, margin_top=24, margin_bottom=24, margin_start=24, margin_end=24)
         win.set_child(main_grid)
 
-        # Área da lista
         list_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
         self.list_container = Gtk.ListBox()
         self.list_container.set_selection_mode(Gtk.SelectionMode.NONE)
         list_box.append(self.list_container)
         main_grid.attach(list_box, 0, 0, 1, 1)
 
-        # Área do formulário - Contêiner principal para alinhamento à direita
         form_container_outer = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, hexpand=True)
         
-        # Espaçador flexível à esquerda para empurrar o conteúdo para a direita
         spacer = Gtk.Box(hexpand=True)
         form_container_outer.append(spacer)
         
-        # Contêiner real do formulário (agora alinhado à direita devido ao espaçador)
         form_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, hexpand=False)
         form_box.add_css_class("right-aligned-form")
         form_container_outer.append(form_box)
 
-        # Definir o tamanho inicial como 10 caracteres e adicionar classe CSS
-        self.name_entry = Gtk.Entry(placeholder_text="Nome da Sessão", width_chars=10, max_width_chars=15)
-        self.name_entry.set_tooltip_text("Informe um nome identificador para a sessão.")
+        self.name_entry = Gtk.Entry(placeholder_text="Session Name", width_chars=10, max_width_chars=15)
+        self.name_entry.set_tooltip_text("Enter an identifying name for the session.")
         self.name_entry.add_css_class("small-entry")
         
-        self.userhost_entry = Gtk.Entry(placeholder_text="usuario@host", width_chars=10, max_width_chars=15)
-        self.userhost_entry.set_tooltip_text("Formato esperado: usuario@ip ou usuario@host")
+        self.userhost_entry = Gtk.Entry(placeholder_text="user@host", width_chars=10, max_width_chars=15)
+        self.userhost_entry.set_tooltip_text("Expected format: user@ip or user@host")
         self.userhost_entry.add_css_class("small-entry")
 
-        self.auth_type_combo = Gtk.DropDown.new_from_strings(["Chave privada", "Senha"])
+        self.auth_type_combo = Gtk.DropDown.new_from_strings(["Private key", "Key"])
         self.auth_type_combo.set_selected(0)
         self.auth_type_combo.connect("notify::selected", self.on_auth_type_changed)
 
-        self.key_file_button = Gtk.Button(label="Selecionar chave")
-        self.key_file_button.set_tooltip_text("Selecione a chave privada para autenticação SSH.")
+        self.key_file_button = Gtk.Button(label="Select key")
+        self.key_file_button.set_tooltip_text("Select the private key for SSH authentication.")
         self.key_file_button.connect("clicked", self.on_select_file)
 
-        self.password_entry = Gtk.PasswordEntry(placeholder_text="Senha", width_chars=10, max_width_chars=15)
-        self.password_entry.set_tooltip_text("Informe a senha para autenticação se aplicável.")
+        self.password_entry = Gtk.PasswordEntry(placeholder_text="Key", width_chars=10, max_width_chars=15)
+        self.password_entry.set_tooltip_text("Enter the password for authentication if applicable.")
         self.password_entry.add_css_class("small-entry")
 
-        # Contêiner para botões com alinhamento à direita
+   
         button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6, halign=Gtk.Align.END)
         
-        self.save_button = Gtk.Button(label="Salvar Sessão")
+        self.save_button = Gtk.Button(label="Save Session")
         self.save_button.add_css_class("save")
         self.save_button.set_sensitive(False)
         self.save_button.connect("clicked", self.on_save)
 
-        self.cancel_button = Gtk.Button(label="Cancelar")
+        self.cancel_button = Gtk.Button(label="Cancel")
         self.cancel_button.connect("clicked", self.on_cancel_edit)
         self.cancel_button.set_visible(False)
 
-        self.quit_button = Gtk.Button(label="Sair")
+        self.quit_button = Gtk.Button(label="Exit")
         self.quit_button.add_css_class("quit")
         self.quit_button.add_css_class("destructive-action")
         self.quit_button.connect("clicked", lambda b: self.quit())
 
-        # Adiciona os botões ao button_box
         button_box.append(self.save_button)
         button_box.append(self.cancel_button)
         button_box.append(self.quit_button)
 
-        # Monitorar alterações nos campos para habilitar o botão salvar
+
         for entry in [self.name_entry, self.userhost_entry, self.password_entry]:
             entry.connect("notify::text", self.on_form_changed)
         self.auth_type_combo.connect("notify::selected", self.on_form_changed)
 
-        # Adiciona todos os widgets ao form_box
+ 
         for widget in [self.name_entry, self.userhost_entry, self.auth_type_combo, 
                       self.key_file_button, self.password_entry, button_box]:
             form_box.append(widget)
@@ -221,7 +214,6 @@ class SSHSessionManager(Adw.Application):
     def on_cancel_edit(self, button):
         self.cancel_button.set_visible(False)
 
-        # Restaura a sessão original se estava editando
         if hasattr(self, 'editing_session_backup'):
             self.sessions.append(self.editing_session_backup)
             self.save_sessions()
@@ -235,11 +227,10 @@ class SSHSessionManager(Adw.Application):
         password = self.password_entry.get_text().strip()
         key_path = getattr(self, "selected_file", "") if auth_type == "key" else ""
 
-        # Reset styles
         for entry in [self.name_entry, self.userhost_entry, self.password_entry]:
             entry.remove_css_class("error")
 
-        # Validação
+
         invalid = False
         if not name:
             self.name_entry.add_css_class("error")
@@ -258,8 +249,8 @@ class SSHSessionManager(Adw.Application):
             self.name_entry.add_css_class("error")
             error_dialog = Gtk.AlertDialog()
             error_dialog.set_modal(True)
-            error_dialog.set_heading("Nome de sessão duplicado")
-            error_dialog.set_body("Já existe uma sessão com esse nome. Escolha um nome diferente.")
+            error_dialog.set_heading("Duplicate session name")
+            error_dialog.set_body("A session with that name already exists. Please choose a different name.")
             error_dialog.add_response("ok", "Ok")
             error_dialog.choose(self.get_active_window())
             return
@@ -267,8 +258,8 @@ class SSHSessionManager(Adw.Application):
         if invalid:
             error_dialog = Gtk.AlertDialog()
             error_dialog.set_modal(True)
-            error_dialog.set_heading("Preencha todos os campos obrigatórios")
-            error_dialog.set_body("Verifique os campos destacados e tente novamente.")
+            error_dialog.set_heading("Fill in all required fields")
+            error_dialog.set_body("Please check the highlighted fields and try again.")
             error_dialog.add_response("ok", "Ok")
             error_dialog.choose(self.get_active_window())
             return
@@ -293,18 +284,15 @@ class SSHSessionManager(Adw.Application):
         for child in children:
             self.list_container.remove(child)
 
-        # Ajustar tamanho dos campos com base na existência de sessões
         if not self.sessions:
-            self.list_container.append(Gtk.Label(label="Nenhuma sessão cadastrada."))
+            self.list_container.append(Gtk.Label(label="No sessions registered."))
             
-            # Para campos vazios, usar classe small-entry e definir tamanhos pequenos
             for entry in [self.name_entry, self.userhost_entry, self.password_entry]:
                 entry.remove_css_class("large-entry")
                 entry.add_css_class("small-entry")
                 entry.set_width_chars(40)
                 entry.set_max_width_chars(15)
         else:
-            # Para quando há sessões, usar classe large-entry e definir tamanhos maiores
             for entry in [self.name_entry, self.userhost_entry, self.password_entry]:
                 entry.remove_css_class("small-entry")
                 entry.add_css_class("large-entry")
@@ -313,25 +301,25 @@ class SSHSessionManager(Adw.Application):
 
         for index, session in enumerate(self.sessions):
             row_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-            label = Gtk.Label(label=f"  {session['name']}")  # Nerd Font ícone de computador + nome
+            label = Gtk.Label(label=f"  {session['name']}")
             label.set_xalign(0)
             label.set_css_classes(["session-label", "session-label-bg"])
             label.set_hexpand(True)
             label.set_xalign(0)
 
-            connect_btn = Gtk.Button(label="Conectar")
+            connect_btn = Gtk.Button(label="Connect")
             connect_btn.add_css_class("connect")
             connect_btn.connect("clicked", self.on_connect_clicked, session)
 
-            edit_btn = Gtk.Button(label="Editar")
+            edit_btn = Gtk.Button(label="Edit")
             edit_btn.add_css_class("edit")
             edit_btn.connect("clicked", self.on_edit_clicked, index)
 
-            duplicate_btn = Gtk.Button(label="Duplicar")
+            duplicate_btn = Gtk.Button(label="Duplicate")
             duplicate_btn.add_css_class("duplicate")
             duplicate_btn.connect("clicked", self.on_duplicate_clicked, session)
 
-            delete_btn = Gtk.Button(label="Excluir")
+            delete_btn = Gtk.Button(label="Delete")
             delete_btn.add_css_class("delete")
             delete_btn.connect("clicked", self.on_delete_clicked, index)
 
@@ -353,8 +341,8 @@ class SSHSessionManager(Adw.Application):
             modal=True,
             buttons=Gtk.ButtonsType.YES_NO,
             message_type=Gtk.MessageType.QUESTION,
-            text="Confirmar edição",
-            secondary_text="Deseja editar esta sessão?"
+            text="Confirm edit",
+            secondary_text="Do you want to edit this session?"
         )
 
         def on_response(dlg, response_id):
@@ -381,8 +369,8 @@ class SSHSessionManager(Adw.Application):
             modal=True,
             buttons=Gtk.ButtonsType.YES_NO,
             message_type=Gtk.MessageType.QUESTION,
-            text="Confirmar duplicação",
-            secondary_text="Deseja duplicar esta sessão?"
+            text="Confirm duplication",
+            secondary_text="Do you want to duplicate this session?"
         )
 
         def on_response(dlg, response_id):
@@ -403,8 +391,8 @@ class SSHSessionManager(Adw.Application):
             modal=True,
             buttons=Gtk.ButtonsType.YES_NO,
             message_type=Gtk.MessageType.QUESTION,
-            text="Confirmação de exclusão",
-            secondary_text="Tem certeza que deseja excluir esta sessão?"
+            text="Deletion confirmation?",
+            secondary_text="Are you sure you want to delete this session?"
         )
 
         def on_response(dlg, response_id):
